@@ -1,182 +1,113 @@
-# Football Analysis Tool
+# Football Analytics Platform
 
-A comprehensive Python-based analysis tool for examining Georgian national football team performance and player statistics.
+A machine learning platform analyzing international football and Georgian national team performance, focusing on goal prediction and team analytics.
 
 ## Overview
 
-This project provides specialized analysis tools for:
-- Georgian player statistics and performance metrics
-- Home vs Away performance analysis for the Georgian national team
-- Goal scoring patterns and match result analysis
+### General Architecture
+The platform consists of four specialized analyzers, each handling different aspects of football analytics:
 
-## Data Sources
+1. **International Goal Pattern Analysis** (`GoalAnalyzer`)
+   - Predicts late goals (75+ minute) across international matches
+   - Features: temporal analysis, home/away impact, penalty patterns
+   - Uses Random Forest and Logistic Regression with balanced class weights 
+   - Advanced feature engineering for cross-team pattern detection
+   - Implements automated data cleaning and ML pipeline
 
-The tool works with three main CSV files:
-1. `goalscorers.csv` - Contains goal scoring data
-2. `results.csv` - Contains match results
-3. `shootouts.csv` - Contains penalty shootout data
+2. **Georgian Player Analysis** (`GeorgianPlayerAnalyzer`)
+   - Tracks Georgian players' performance metrics
+   - Analyzes scoring patterns and match contributions
+   - Generates comprehensive player statistics
 
-## Installation
+3. **Georgian Home/Away Analysis** (`GeorgianHomeAwayAnalyzer`)
+   - Compares team performance in different venues
+   - Analyzes tournament-specific patterns
+   - Tracks opponent-level statistics
 
-### Prerequisites
-- Python 3.7+
-- pandas
-- numpy
-- matplotlib
-- seaborn
+4. **Match Prediction** (`MatchPredictor`)
+   - Predicts match outcomes using ensemble methods
+   - Implements cross-validation and hyperparameter tuning
+   - Generates feature importance analysis
 
-### Setup
+## Data Requirements
+
+Three CSV datasets required:
+
+1. **results.csv** (~4610 records)
+   - Match results and metadata
+   - Schema: date, home_team, away_team, home_score, away_score, tournament, city, country, neutral
+   - Covers international matches with detailed location information
+
+2. **goalscorers.csv** (~4759 records)
+   - Individual goal events
+   - Schema: date, home_team, away_team, team, scorer, minute, own_goal, penalty
+   - Records every goal with timing and type
+
+3. **shootouts.csv** (~89 records)
+   - Penalty shootout details
+   - Schema: date, home_team, away_team, winner, first_shooter
+   - Tracks shootout outcomes and first shooters
+
+## Installation & Setup
+
 ```bash
-# Clone the repository
-git clone [repository-url]
+# Clone repository
+git clone https://github.com/yourusername/football-analytics.git
 
-# Install required packages
+# Install dependencies
 pip install -r requirements.txt
+
+# Set up data directory
+mkdir -p Data/InternationalMatches
+```
+
+## Usage Examples
+
+```python
+# International Goal Analysis
+from goal_analyzer import GoalAnalyzer
+analyzer = GoalAnalyzer()
+analyzer.load_and_clean_data()
+analyzer.prepare_ml_features()
+rf_model, lr_model = analyzer.train_models()
+
+# Georgian Player Analysis
+from georgian_player_analyzer import GeorgianPlayerAnalyzer
+georgian_analyzer = GeorgianPlayerAnalyzer()
+georgian_analyzer.load_data('goalscorers.csv', 'results.csv')
+stats = georgian_analyzer.get_georgian_scorers_stats()
+
+# Match Prediction
+from match_predictor import MatchPredictor
+predictor = MatchPredictor()
+predictor.load_and_process_data()
+results = predictor.train_models()
 ```
 
 ## Project Structure
 
 ```
-georgian-football-analysis/
-│
-├── data/
-│   ├── goalscorers.csv
-│   ├── results.csv
-│   └── shootouts.csv
-│
-├── src/
-│   ├── georgian_player_analyzer.py
-│   └── georgian_home_away_analyzer.py
-│   └── match_predictor.py
-│
-└── README.md
+football-analytics/
+├── Data/
+│   └── InternationalMatches/
+│       ├── goalscorers.csv
+│       ├── results.csv
+│       └── shootouts.csv
+├── Visualizations/
+│   └── MatricesForInternationalGoalScorers/
+├── goal_analyzer.py
+├── georgian_player_analyzer.py
+├── georgian_home_away_analyzer.py
+└── match_predictor.py
 ```
 
-## Features
+## Dependencies
+- pandas>=1.3.0
+- numpy>=1.20.0
+- scikit-learn>=0.24.0
+- matplotlib>=3.4.0 
+- seaborn>=0.11.0
+- xgboost>=1.4.0
 
-### Georgian Player Analyzer
-- Individual player statistics tracking
-- Goal scoring patterns analysis
-- Penalty kick analysis
-- Timeline visualizations of goals
-- Top scorers rankings
-
-### Georgian Home vs Away Analyzer
-- Match result statistics
-- Goal distribution analysis
-- Tournament performance tracking
-- Opponent analysis
-- Performance visualizations
-### Match Predictor
-Machine learning-based match outcome predictor using historical data, team performance, and tournament context.
-- Match outcome prediction (win/loss)
-- Team performance analytics
-- Tournament importance evaluation
-- Penalty shootout pattern analysis
-- Performance visualization
-
-## Usage
-
-### Player Analysis
-```python
-from georgian_player_analyzer import GeorgianPlayerAnalyzer
-
-# Initialize analyzer
-analyzer = GeorgianPlayerAnalyzer()
-
-# Load data
-analyzer.load_data('Data/InternationalMatches/goalscorers.csv', 'Data/InternationalMatches/results.csv')
-
-# Get player statistics
-stats = analyzer.get_georgian_scorers_stats()
-
-# Create visualizations
-analyzer.plot_georgian_goals_timeline()
-analyzer.plot_top_georgian_scorers()
-```
-
-### Home vs Away Analysis
-```python
-from georgian_home_away_analyzer import GeorgianHomeAwayAnalyzer
-
-# Initialize analyzer
-analyzer = GeorgianHomeAwayAnalyzer()
-
-# Load data
-analyzer.load_data('Data/InternationalMatches/results.csv', 'Data/InternationalMatches/goalscorers.csv')
-
-# Get performance statistics
-stats = analyzer.calculate_overall_statistics()
-
-# Analyze tournament performance
-tournament_stats = analyzer.analyze_tournaments()
-
-# Create visualizations
-analyzer.plot_performance_comparison()
-analyzer.plot_goals_distribution()
-```
-
-### Match Predictor
-```python
-from match_predictor import MatchPredictor
-
-# Initialize predictor
-predictor = MatchPredictor()
-
-# Load and process data
-predictor.load_and_process_data()
-
-# Train models and get predictions
-predictor.prepare_features()
-results = predictor.train_models()
-
-# Access predictions and visualizations
-print(results['RandomForest']['report'])
-```
-
-## Key Features
-
-### Player Statistics
-- Total goals scored
-- Penalty goals
-- Goal timing patterns
-- Home vs away goals
-- Scoring periods
-
-### Team Performance Metrics
-- Win/loss/draw ratios
-- Goals scored/conceded
-- Tournament performance
-- Home vs away comparison
-- Opponent analysis
-
-### Visualizations
-- Goal timeline plots
-- Performance comparison charts
-- Goal distribution analyses
-- Tournament performance graphs
-
-## Model Types
-- Random Forest Classifier
-- Gradient Boosting Classifier
-- XGBoost Classifier
-- logistic regression
-- confusion matrix
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- Data sources and any relevant acknowledgments
-- Contributors to the project
-- Any third-party libraries or tools used
-
-## Contact
-
-For any queries or suggestions, please open an issue in the repository.
+## DataSource
+https://www.kaggle.com/datasets/martj42/international-football-results-from-1872-to-2017/data?select=goalscorers.csv
