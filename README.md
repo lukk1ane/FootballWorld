@@ -47,6 +47,7 @@ georgian-football-analysis/
 ├── src/
 │   ├── georgian_player_analyzer.py
 │   └── georgian_home_away_analyzer.py
+│   └── match_predictor.py
 │
 └── README.md
 ```
@@ -66,6 +67,13 @@ georgian-football-analysis/
 - Tournament performance tracking
 - Opponent analysis
 - Performance visualizations
+### Match Predictor
+Machine learning-based match outcome predictor using historical data, team performance, and tournament context.
+- Match outcome prediction (win/loss)
+- Team performance analytics
+- Tournament importance evaluation
+- Penalty shootout pattern analysis
+- Performance visualization
 
 ## Usage
 
@@ -108,6 +116,24 @@ analyzer.plot_performance_comparison()
 analyzer.plot_goals_distribution()
 ```
 
+### Match Predictor
+```python
+from match_predictor import MatchPredictor
+
+# Initialize predictor
+predictor = MatchPredictor()
+
+# Load and process data
+predictor.load_and_process_data()
+
+# Train models and get predictions
+predictor.prepare_features()
+results = predictor.train_models()
+
+# Access predictions and visualizations
+print(results['RandomForest']['report'])
+```
+
 ## Key Features
 
 ### Player Statistics
@@ -129,6 +155,13 @@ analyzer.plot_goals_distribution()
 - Performance comparison charts
 - Goal distribution analyses
 - Tournament performance graphs
+
+## Model Types
+- Random Forest Classifier
+- Gradient Boosting Classifier
+- XGBoost Classifier
+- logistic regression
+- confusion matrix
 
 ## Contributing
 
