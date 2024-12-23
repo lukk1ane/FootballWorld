@@ -1,4 +1,4 @@
-# Football Analytics Platform
+# International/Georgian Football Analytics Platform
 
 A machine learning platform analyzing international football and Georgian national team performance, focusing on goal prediction and team analytics.
 
