@@ -1,19 +1,6 @@
-1. Data Processing
-    - Use of Pandas for data manipulation
-    - Implementation of data cleaning and preprocessing
-    - Proper handling of missing values and outliers
-2. Exploratory Data Analysis
-    - Comprehensive use of NumPy and Pandas
-    - At least 5 different types of visualizations using Matplotlib/Seaborn
-    - Statistical analysis of the data
-3. Machine Learning
-    - Implementation of at least two different ML models
-    - Proper train/test split
-    - Model evaluation and comparison
-    - Feature engineering/selection
-4. Code Quality
-    - Well-documented code with comments
-    - Proper function/class organization
-    - Consistent coding style
-    - Error handling
-    - Requirements.txt file
+pandas>=1.3.0
+numpy>=1.20.0
+scikit-learn>=0.24.0
+matplotlib>=3.4.0
+seaborn>=0.11.0
+xgboost>=1.4.0
