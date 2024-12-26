@@ -16,7 +16,7 @@ warnings.filterwarnings('ignore')
 
 class MatchPredictor:
     def __init__(self):
-        """Initialize the Enhanced Match Predictor"""
+        """Initialization"""
         self.results_df = None
         self.goalscorers_df = None
         self.shootouts_df = None
@@ -24,36 +24,33 @@ class MatchPredictor:
         self.feature_names = None
         self.label_encoders = {}
 
-        # Create output directories
+        # output directory for plots
         self.output_dir = 'match_predictions'
         for dir_name in ['matrices', 'metrics', 'feature_importance']:
             os.makedirs(os.path.join(self.output_dir, dir_name), exist_ok=True)
 
     def load_and_process_data(self):
-        """Load and process all three datasets"""
+        """Loading and preprocessing all data"""
         try:
             # Load datasets
-            self.results_df = pd.read_csv('Data/InternationalMatches/results.csv')
-            self.goalscorers_df = pd.read_csv('Data/InternationalMatches/goalscorers.csv')
-            self.shootouts_df = pd.read_csv('Data/InternationalMatches/shootouts.csv')
+            self.results_df = pd.read_csv('results.csv')
+            self.goalscorers_df = pd.read_csv('goalscorers.csv')
+            self.shootouts_df = pd.read_csv('shootouts.csv')
 
-            # Convert dates
+            # Converting dates from string to date time
             for df in [self.results_df, self.goalscorers_df, self.shootouts_df]:
                 df['date'] = pd.to_datetime(df['date'])
 
-            # Create target variable
+            # target variable: outcome/result we want our model to predict (whether the home team wins)
             self.results_df['home_win'] = (self.results_df['home_score'] > self.results_df['away_score']).astype(int)
 
-            # Add shootout information
             self._process_shootouts()
 
-            # Add goal patterns
             self._process_goal_patterns()
 
-            # Add team statistics
+            # calculating team statistics (team performance metrics)
             self._add_team_statistics()
 
-            # Add tournament features
             self._process_tournament_features()
 
             print("\nData processing completed successfully!")
@@ -67,7 +64,11 @@ class MatchPredictor:
 
     def _process_shootouts(self):
         """Process shootout information"""
+        # processes data related to shootouts from two datasets—results_df and shootouts_df—and integrates
+        # this information into the main dataset, enhancing the dataset with relevant shootout features
+
         # Create a mask for matches that went to shootouts
+        # merging self.results_df with self.shootouts_df
         shootout_matches = pd.merge(
             self.results_df,
             self.shootouts_df[['date', 'home_team', 'away_team', 'winner', 'first_shooter']],
@@ -75,7 +76,7 @@ class MatchPredictor:
             how='left'
         )
 
-        # Add shootout-related features
+        # adding features
         self.results_df['went_to_shootout'] = shootout_matches['winner'].notna().astype(int)
         self.results_df['won_shootout'] = (shootout_matches['winner'] == shootout_matches['home_team']).astype(int)
         self.results_df['shootout_first'] = (shootout_matches['first_shooter'] == shootout_matches['home_team']).astype(
@@ -84,14 +85,15 @@ class MatchPredictor:
     def _process_goal_patterns(self):
         """Process goal scoring patterns with enhanced error handling"""
         try:
-            # Group goals by match
+            # grouping the goalscorers_df datarframe by date, home_team, and away_team
+            # and for each match calculating count, mean, sum, and std
             match_goals = self.goalscorers_df.groupby(['date', 'home_team', 'away_team']).agg({
                 'minute': ['count', 'mean', 'std'],
                 'penalty': 'sum',
                 'own_goal': 'sum'
             }).reset_index()
 
-            # Flatten column names
+            # flattening
             match_goals.columns = ['date', 'home_team', 'away_team',
                                    'goals_in_match', 'avg_goal_minute',
                                    'goal_minute_std', 'penalties', 'own_goals']
@@ -100,7 +102,7 @@ class MatchPredictor:
             match_goals['date'] = pd.to_datetime(match_goals['date'])
             self.results_df['date'] = pd.to_datetime(self.results_df['date'])
 
-            # Merge with results
+            # goal-scoring statistics are merged back into the main results_df
             self.results_df = pd.merge(
                 self.results_df,
                 match_goals,
@@ -108,12 +110,12 @@ class MatchPredictor:
                 how='left'
             )
 
-            # Fill NA values with appropriate defaults
+            # using appropriate default values to fill missing values
             numeric_columns = ['goals_in_match', 'penalties', 'own_goals']
             for col in numeric_columns:
                 self.results_df[col] = self.results_df[col].fillna(0)
 
-            # Fill goal timing stats with median values where available
+            # fill goal timing stats with median values
             timing_columns = ['avg_goal_minute', 'goal_minute_std']
             for col in timing_columns:
                 median_value = self.results_df[col].median()
@@ -121,7 +123,7 @@ class MatchPredictor:
                     median_value = 45  # default to middle of game if no data
                 self.results_df[col] = self.results_df[col].fillna(median_value)
 
-            # Verify no NaN values remain
+            # verifying no NaN values remain
             nan_check = self.results_df[numeric_columns + timing_columns].isna().sum()
             if nan_check.any():
                 print("\nWarning: Some NaN values remain after goal pattern processing:")
@@ -129,7 +131,6 @@ class MatchPredictor:
 
         except Exception as e:
             print(f"Error in goal pattern processing: {str(e)}")
-            # Set default values if processing fails
             default_columns = {
                 'goals_in_match': 0,
                 'avg_goal_minute': 45,
@@ -142,30 +143,32 @@ class MatchPredictor:
                     self.results_df[col] = default_value
 
     def _add_team_statistics(self):
-        """Calculate team performance statistics"""
+        """Calculating basic team statistics"""
+
         # Calculate rolling stats for each team
         for team_type in ['home_team', 'away_team']:
-            # Calculate team's recent performance (last 5 matches)
-            # First, create a copy of the dataframe sorted by date
+            # creating a copy of the dataframe sorted by date, so the calculations are done in chronological order
             sorted_df = self.results_df.sort_values('date')
 
-            # Calculate rolling mean for each team
+            # creating a dictionary of team statistics "recent_performance"
+            # and adding statistics for both teams to the results dataframe
             recent_performance = {}
             for team in sorted_df[team_type].unique():
                 team_matches = sorted_df[sorted_df[team_type] == team]
+                # calculating the average win rate for the last 5 matches.
                 recent_performance[team] = team_matches['home_win'].rolling(
                     window=5,
                     min_periods=1
                 ).mean()
 
-            # Create a new column for recent form
+            # store results
             self.results_df[f'{team_type}_recent_form'] = self.results_df[team_type].map(
                 lambda x: recent_performance.get(x, pd.Series()).iloc[-1] \
                     if x in recent_performance else 0
             )
 
-            # Calculate historical win rates
-            # Calculate team statistics
+            # creating a dictionary of team statistics and adding
+            # statistics for both teams to the results dataframe
             team_stats = {}
             for team in self.results_df[team_type].unique():
                 team_matches = self.results_df[self.results_df[team_type] == team]
@@ -173,11 +176,9 @@ class MatchPredictor:
                     'win_rate': team_matches['home_win'].mean(),
                     'avg_goals': team_matches['goals_in_match'].mean() if 'goals_in_match' in team_matches else 0,
                     'std_goals': team_matches['goals_in_match'].std() if 'goals_in_match' in team_matches else 0,
-                    'shootout_rate': team_matches[
-                        'went_to_shootout'].mean() if 'went_to_shootout' in team_matches else 0
+                    'shootout_rate': team_matches['went_to_shootout'].mean() if 'went_to_shootout' in team_matches else 0
                 }
 
-            # Add statistics as new columns
             self.results_df[f'{team_type}_win_rate'] = self.results_df[team_type].map(
                 lambda x: team_stats[x]['win_rate'] if x in team_stats else 0
             )
@@ -193,10 +194,10 @@ class MatchPredictor:
 
     def _process_tournament_features(self):
         """Process tournament-related features"""
-        # Create tournament type features
+
         self.results_df['is_friendly'] = (self.results_df['tournament'] == 'Friendly').astype(int)
 
-        # Calculate tournament importance based on goal frequency
+        # tournament - average goals per match
         tournament_importance = self.results_df.groupby('tournament').agg({
             'goals_in_match': 'mean'
         }).reset_index()
@@ -213,9 +214,16 @@ class MatchPredictor:
         )
 
     def prepare_features(self):
-        """Prepare features for machine learning with proper handling of missing values"""
+        """Preparing dataset for model training, with proper handling of missing values"""
+
         try:
             # Select features based on actual columns
+            # team_recent_form - recent performance
+            # win_rate - win rate of a team
+            # avg_goals - average goals of a team
+            # std_goals - standard deviation of goals scored
+            # shootout_rate - proportion of matches involving the opposite team that went to a shootout
+            # tournament_importance - a normalized score representing the importance of the tournament
             numeric_features = [
                 'home_team_recent_form', 'away_team_recent_form',
                 'home_team_win_rate', 'away_team_win_rate',
@@ -235,34 +243,34 @@ class MatchPredictor:
                 self.results_df[binary_features]
             ], axis=1)
 
-            # Fill NaN values
+            # filling in NaN values
             for feature in numeric_features:
                 X[feature] = X[feature].fillna(X[feature].mean())
             for feature in binary_features:
                 X[feature] = X[feature].fillna(0)
 
-            # Print info about remaining NaN values if any
             nan_counts = X.isna().sum()
             if nan_counts.any():
                 print("\nWarning: Remaining NaN values after initial filling:")
                 print(nan_counts[nan_counts > 0])
 
-            # Ensure all NaN values are handled
             X = X.fillna(0)
 
             # Store feature names
             self.feature_names = X.columns.tolist()
 
-            # Scale numeric features
+            # Scaling
+            # computes the mean and standard deviation based
+            # on the train set and scales the features accordingly
             scaler = StandardScaler()
             X[numeric_features] = scaler.fit_transform(X[numeric_features])
 
-            # Create target variable
+            # target variable that the model will predict
             y = self.results_df['home_win']
 
-            # Split data with temporal awareness
+            # splitting the data
             split_date = self.results_df['date'].sort_values().iloc[int(len(self.results_df) * 0.8)]
-
+            # the model is trained on older data and tested on newer data
             train_mask = self.results_df['date'] <= split_date
             self.X_train = X[train_mask]
             self.X_test = X[~train_mask]
@@ -282,22 +290,24 @@ class MatchPredictor:
     def train_models(self):
         """Train and evaluate models with cross-validation and hyperparameter tuning"""
         try:
-            # Define models and their parameter grids
+            # Defining models, by creating dictionaries:
+            #                 model: the actual classifier instance
+            #                 params: a dictionary of hyperparameters to tune with their possible values
             models = {
                 'RandomForest': {
                     'model': RandomForestClassifier(random_state=42),
                     'params': {
-                        'n_estimators': [100, 200],
-                        'max_depth': [10, 20],
-                        'min_samples_split': [2, 5]
+                        'n_estimators': [100, 200], # number of trees in the forest
+                        'max_depth': [10, 20], # maximum depth of each tree
+                        'min_samples_split': [2, 5] # minimum samples required to split a node
                     }
                 },
                 'GradientBoosting': {
                     'model': GradientBoostingClassifier(random_state=42),
                     'params': {
-                        'n_estimators': [100, 200],
-                        'learning_rate': [0.01, 0.1],
-                        'max_depth': [3, 5]
+                        'n_estimators': [100, 200], # number of boosting stages
+                        'learning_rate': [0.01, 0.1], # how much each tree contributes
+                        'max_depth': [3, 5] # maximum depth of each tree
                     }
                 },
                 'XGBoost': {
@@ -316,6 +326,8 @@ class MatchPredictor:
                 print(f"\nTraining {name}...")
 
                 # Cross-validation
+                # Splits training data into 5 folds
+                # train on 4, validate on 1
                 cv_scores = cross_val_score(
                     config['model'],
                     self.X_train,
@@ -338,7 +350,7 @@ class MatchPredictor:
                 best_model = grid_search.best_estimator_
                 y_pred = best_model.predict(self.X_test)
 
-                # Store results
+                # Stores comprehensive results
                 results[name] = {
                     'model': best_model,
                     'best_params': grid_search.best_params_,
@@ -348,6 +360,8 @@ class MatchPredictor:
                 }
 
                 # Generate visualizations
+                # Confusion matrix shows true vs predicted class distribution
+                # Feature importance shows which input features had the most impact on predictions
                 self._plot_confusion_matrix(self.y_test, y_pred, name)
                 if hasattr(best_model, 'feature_importances_'):
                     self._plot_feature_importance(best_model, name)
@@ -365,7 +379,17 @@ class MatchPredictor:
             raise
 
     def _plot_confusion_matrix(self, y_true, y_pred, model_name):
-        """Plot confusion matrix"""
+        """
+        Visual representation of prediction accuracy
+                  True Positives (correctly predicted wins)
+                  True Negatives (correctly predicted losses/draws)
+                  False Positives (incorrectly predicted wins)
+                  False Negatives (incorrectly predicted losses/draws)
+                  Args:
+                  y_true: the actual labels
+                  y_pred: the predicted labels from the model
+                  model_name: the name of the model for which the confusion matrix is being plotted
+        """
         try:
             cm = confusion_matrix(y_true, y_pred)
             plt.figure(figsize=(10, 8))
@@ -393,8 +417,12 @@ class MatchPredictor:
             raise
 
     def _plot_feature_importance(self, model, model_name):
-        """Plot feature importance"""
+        """
+           Visualizes which features have the most impact on the model's predictions
+           Feature importance rankings
+        """
         try:
+            # dataframe with feature names and their importance scores
             importance = pd.DataFrame({
                 'feature': self.feature_names,
                 'importance': model.feature_importances_
@@ -422,12 +450,11 @@ class MatchPredictor:
 
 
 def main():
-    """Main execution function"""
+    """Main function"""
     try:
-        # Initialize predictor
+        # initializing predictor
         predictor = MatchPredictor()
 
-        # Execute pipeline
         print("Loading and processing data...")
         predictor.load_and_process_data()
 
