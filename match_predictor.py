@@ -33,9 +33,9 @@ class MatchPredictor:
         """Loading and preprocessing all data"""
         try:
             # Load datasets
-            self.results_df = pd.read_csv('results.csv')
-            self.goalscorers_df = pd.read_csv('goalscorers.csv')
-            self.shootouts_df = pd.read_csv('shootouts.csv')
+            self.results_df = pd.read_csv('Data/InternationalMatches/results.csv')
+            self.goalscorers_df = pd.read_csv('Data/InternationalMatches/goalscorers.csv')
+            self.shootouts_df = pd.read_csv('Data/InternationalMatches/shootouts.csv')
 
             # Converting dates from string to date time
             for df in [self.results_df, self.goalscorers_df, self.shootouts_df]:
